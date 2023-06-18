@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8">
+    <title>Chatアプリ</title>
+    <style>
+        #output {
+            height: 1000px;
+            overflow-y: scroll;
+        }
+        body {
+            background-color: #c3dfe7;
+            background-image: linear-gradient(45deg, #ddebf7, #b3e5fc);
+}
+
+
+    </style>
+</head>
+
+<body>
+
+
+    <!--/ コンテンツ表示画面 -->
+    <div>
+        <div>
+            名前: <input type="text" id="uname">
+        </div>
+        <div>
+            <textarea name="" id="text" cols="30" rows="10"></textarea>
+            <button id="send">送信</button>
+        </div>
+        <div id="output"></div>
+    </div>
+    <button id="delete-all">全削除</button>
+
+    <!-- JQuery -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <!-- JQuery -->
+
+
+    <!--** 以下Firebase **-->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+        import { getDatabase, ref, push, set, onChildAdded, remove, onChildRemoved }
+        from "https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.2/firebase-database.js";
+
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC2fUQWzMTgwylUxBR2QiBpArsRdsy0vsY",
+            authDomain: "fir-demo-e9897.firebaseapp.com",
+            projectId: "fir-demo-e9897",
+            storageBucket: "fir-demo-e9897.appspot.com",
+            messagingSenderId: "786236587748",
+            appId: "1:786236587748:web:f7238178dcb300531eb6f1"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const dbRef =ref(db,"chat");
+    
+
+    // <!-- 送信ボタンが押されたら、データをDBに送信 -->
+// メッセージ数とひろゆき氏からのメッセージ送信フラグを保持する変数
+let messageCount = 0;
+let hiroYukiMessageFlag = false;
+
+    $("#send").on("click", function(){
+        //保存したいDATAのオブジェクトを作る
+        const msg ={
+            uname: $("#uname").val(),
+            text: $("#text").val(),
+            date: new Date().toLocaleDateString(), // 送信日付を追加
+            time: new Date().toLocaleTimeString() // 送信時間を追加
+        };  
+        console.log(msg)
+        // 新規のデータを送れる状態にセット
+        const newPostRef = push(dbRef);
+        // DBに値を送信
+        set(newPostRef, msg);
+         // メッセージ数を更新
+        messageCount++;
+       
+    // メッセージ数が一定数に達した場合にひろゆき氏からのメッセージを送信
+    if (messageCount === 5) {
+        sendHiroYukiMessage("(ひろゆき氏が入室しました)");
+    } else if (messageCount === 10) {
+        sendHiroYukiMessage("へー");
+    } else if (messageCount === 12) {
+        sendHiroYukiMessage("なるほどなるほど");
+    } else if (messageCount === 13) {
+        sendHiroYukiMessage("うんうん");
+    } else if (messageCount === 14) {
+        sendHiroYukiMessage("それって根拠とかあるんですか？");
+    } else if (messageCount === 15) {
+        sendHiroYukiMessage("はいはい");
+    } else if (messageCount === 16) {
+        sendHiroYukiMessage("でもそれってあなたの感想ですよね？");
+    } else if (messageCount === 17) {
+        sendHiroYukiMessage("いいですね");
+    } else if (messageCount === 18) {
+        sendHiroYukiMessage("へー");
+    } else if (messageCount === 19) {
+        sendHiroYukiMessage("DATAとかあるんですか？");
+    } else if (messageCount === 20) {
+        sendHiroYukiMessage("それってあなたの感想ですよね？");
+    } else if (messageCount === 21) {
+        sendHiroYukiMessage("根拠とかあるんですか？");
+    } else if (messageCount === 22) {
+        sendHiroYukiMessage("はい論破ー！");
+     } else if (messageCount === 23) {
+        sendHiroYukiMessage("(ひろゆき氏が退室しました）");
+    }
+
+
+});
+
+
+// ひろゆき氏からのメッセージを送信する関数
+function sendHiroYukiMessage(text) {
+    const hiroYukiMsg = {
+        uname: "ひろゆき氏",
+        text: text,
+        };
+    const hiroYukiPostRef = push(dbRef);
+    set(hiroYukiPostRef, hiroYukiMsg);
+
+    // フラグを更新して再送信を防止
+    hiroYukiMessageFlag = true;
+}
+
+onChildAdded(dbRef, function(data){
+        const msg = data.val();
+        const key = data.key;
+        const h = `<p id="${key}" class="message">${msg.uname}: ${msg.text} (${msg.date} ${msg.time}) <button class="delete-btn" data-key="${key}">削除</button></p>`; 
+        $("#output").append(h);  
+});
+
+// onChildAdded(dbRef, function (data) {
+//             const msg = data.val();
+//             const key = data.key;
+//             const h = `<p id="${key}" class="message">${msg.uname}: ${msg.text} <button class="delete-btn" data-key="${key}">削除</button></p>`;
+//             $("#output").append(h);
+//         });
+
+        // 削除の挙動
+        $(document).on("click", ".delete-btn", function () {
+            const messageKey = $(this).data("key");
+            const messageRef = ref(db, `chat/${messageKey}`);
+            remove(messageRef);
+        });
+
+        onChildRemoved(dbRef, function (data) {
+            const key = data.key;
+            $(`.message#${key}`).remove();
+        });
+
+// 追加
+$("#delete-all").on("click", function() {
+    // 全てのメッセージを削除
+    remove(dbRef);
+    // output要素の中身を空にする
+    $("#output").empty();
+});
+
+
+    </script>
+
+
+
+
+
+
+
+</body>
+
+</html>
